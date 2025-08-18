@@ -19,3 +19,4 @@ build/
 # Data
 runs/
 data/
+nohup.out

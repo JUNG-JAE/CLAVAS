@@ -1,6 +1,6 @@
 import os
 import logging
-
+from data_loader import get_supervised_loaders
 
 def create_directory(path):
     os.makedirs(path, exist_ok=True)
@@ -17,9 +17,10 @@ def set_logger(args):
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
     formatter = logging.Formatter('%(message)s')
-    file_handler = logging.FileHandler(filename=f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.log')
+    file_handler = logging.FileHandler(filename=f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.log')
     file_handler.setFormatter(formatter)
 
     logger.addHandler(file_handler)
 
     return logger
+
