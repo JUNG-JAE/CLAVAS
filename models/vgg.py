@@ -49,10 +49,10 @@ class ProjectionHeadV2(nn.Module):
 
 
 class SimCLRv2Model(nn.Module):
-    def __init__(self, hidden_dim=2048, proj_dim=128):
+    def __init__(self, args):
         super().__init__()
-        self.encoder = VGG11Encoder()
-        self.proj_head = ProjectionHeadV2(in_dim=512, hidden_dim=hidden_dim, out_dim=proj_dim)
+        self.encoder = VGG11Encoder(args)
+        self.proj_head = ProjectionHeadV2(in_dim=512, hidden_dim=args.hidden_dim, out_dim=args.proj_dim)
 
     def forward(self, x):
         feats = self.encoder(x)       # [B, 512]

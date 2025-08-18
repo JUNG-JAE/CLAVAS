@@ -1,4 +1,5 @@
 import random
+from PIL import Image
 import torchvision
 from torchvision import transforms
 from dataclasses import dataclass
@@ -35,6 +36,8 @@ class SimCLRTransform:
         ])
 
     def __call__(self, x):
+        if isinstance(x, (tuple, list)):
+            x = x[0]
         xi = self.base_transform(x)
         xj = self.base_transform(x)
         
@@ -42,22 +45,20 @@ class SimCLRTransform:
     
     
 class TwoCropCIFAR10(CIFAR10):
-    # CIFAR-10 dataset that returns two augmented crops for SimCLR pretraining.
     def __init__(self, root, train=True, transform=None, download=False):
-        super().__init__(root=root, train=train, transform=transform, download=download)
+        super().__init__(root=root, train=train, transform=None, download=download)
+        self.two_crop_transform = transform
 
     def __getitem__(self, index):
-        img, _ = super().__getitem__(index)  # ignore label for self-supervised
-        # transform returns (xi, xj)
-        xi, xj = self.transform(img)
-        
+        img = Image.fromarray(self.data[index])
+        xi, xj = self.two_crop_transform(img)
         return xi, xj
     
 
 def get_pretrain_loaders(args):
     transform = SimCLRTransform(image_size=32)
     train_set = TwoCropCIFAR10(root=args.data_dir, train=True, transform=transform, download=True)
-    loader = DataLoader(train_set, batch_size=args.batch_size, shuffle=True, num_workers=args.num_workers, drop_last=True, pin_memory=True)
+    loader = DataLoader(train_set, batch_size=args.batch, shuffle=True, num_workers=args.num_workers, drop_last=True, pin_memory=True)
     
     return loader
 
@@ -70,14 +71,14 @@ def build_linear_eval_transforms():
         transforms.Normalize(mean=(0.4914, 0.4822, 0.4465), std=(0.2470, 0.2435, 0.2616)),])
 
 
-def get_supervised_loaders(args, batch_size_train: int = 512, batch_size_test: int = 512):
+def get_supervised_loaders(args):
     transform_train = build_linear_eval_transforms()
     transform_test = build_linear_eval_transforms()
 
     train_set = CIFAR10(root=args.data_dir, train=True, transform=transform_train, download=True)
     test_set = CIFAR10(root=args.data_dir, train=False, transform=transform_test, download=True)
 
-    train_loader = DataLoader(train_set, batch_size=batch_size_train, shuffle=True, num_workers=args.num_workers, pin_memory=True)
-    test_loader = DataLoader(test_set, batch_size=batch_size_test, shuffle=False, num_workers=args.num_workers, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_size=args.linear_eval_batch, shuffle=True, num_workers=args.num_workers, pin_memory=True)
+    test_loader = DataLoader(test_set, batch_size=args.linear_eval_batch, shuffle=False, num_workers=args.num_workers, pin_memory=True)
     
     return train_loader, test_loader

@@ -11,7 +11,7 @@ import random
 
 from data_loader import get_pretrain_loaders, get_supervised_loaders
 from models.vgg import SimCLRv2Model, LinearEvalNet
-
+from utils_system import print_log
 
 def set_seed(seed: int = 42):
     random.seed(seed)
@@ -40,22 +40,22 @@ def nt_xent_loss(z_i, z_j, tau=0.5):
     return loss
 
 
-def pretrain(args):
+def pretrain(args, logger):
     set_seed(args.seed)
     device = torch.device(args.device)
     
     loader = get_pretrain_loaders(args)
-    model = SimCLRv2Model(hidden_dim=args.hidden_dim, proj_dim=args.proj_dim).to(device)
+    model = SimCLRv2Model(args).to(device)
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
-    if os.path.exists(args.ckpt_path):
-        print(f"Loading checkpoint from {args.ckpt_path} for linear eval...")
-        payload = torch.load(args.ckpt_path, map_location=args.device)
+    if os.path.exists(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.pth'):
+        print_log(logger, f"Loading checkpoint from {args.log_dir}/{args.type}/{args.dataset}_{args.encoder} for pretraining...")
+        payload = torch.load(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.pth', map_location=args.device)
         state = payload.get("state_dict", payload)
         model.load_state_dict(state, strict=True)
     else:
-        print("Checkpoint not found; using in-memory model.")
+        print_log(logger, "Checkpoint not found; using in-memory model.")
 
     model.train()
     for epoch in range(1, args.epochs + 1):
@@ -77,12 +77,12 @@ def pretrain(args):
 
         scheduler.step()
         avg_loss = total_loss / len(loader)
-        print(f"[Pretrain] Epoch {epoch:03d}/{args.epochs}  Loss: {avg_loss:.4f}  LR: {scheduler.get_last_lr()[0]:.6f}")
+        print_log(logger, f"[Pretrain] Epoch {epoch:03d}/{args.epochs}  Loss: {avg_loss:.4f}  LR: {scheduler.get_last_lr()[0]:.6f}")
 
     # Save encoder + projection head
-    os.makedirs(os.path.dirname(args.ckpt_path), exist_ok=True)
-    torch.save({"state_dict": model.state_dict(), "cfg": args.__dict__,}, args.ckpt_path)
-    print(f"Saved checkpoint to: {args.ckpt_path}")
+    os.makedirs(os.path.dirname(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.pth'), exist_ok=True)
+    torch.save({"state_dict": model.state_dict(), "cfg": args.__dict__,}, f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.pth')
+    print_log(logger, f"Saved checkpoint to: {f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.pth'}")
     
     return model
 
@@ -102,7 +102,7 @@ def accuracy(logits, targets, topk=(1,)):
     return res
 
 
-def linear_eval(args, model: SimCLRv2Model):
+def linear_eval(args, model: SimCLRv2Model, logger):
     device = torch.device(args.device)
     train_loader, test_loader = get_supervised_loaders(args)
 
@@ -153,7 +153,7 @@ def linear_eval(args, model: SimCLRv2Model):
                 test_correct += (pred == y).sum().item()
                 test_total += y.size(0)
         test_acc = 100.0 * test_correct / test_total
-        print(f"[LinearEval] Epoch {epoch:03d}/{args.linear_eval_epochs}  TrainLoss: {train_loss:.4f}  TrainAcc@1: {train_acc:.2f}%  TestAcc@1: {test_acc:.2f}%")
+        print_log(logger, f"[LinearEval] Epoch {epoch:03d}/{args.linear_eval_epochs}  TrainLoss: {train_loss:.4f}  TrainAcc@1: {train_acc:.2f}%  TestAcc@1: {test_acc:.2f}%")
 
     return lin
 
