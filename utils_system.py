@@ -32,9 +32,7 @@ def set_logger(args):
     return logger
 
 
-# ==============================
-# t-SNE utilities for visualization
-
+# ===== t-SNE utilities for visualization =====
 CIFAR10_CLASSES = ["airplane", "automobile", "bird", "cat", "deer", "dog", "frog", "horse", "ship", "truck"] # CIFAR10 class names for legends
 
 @torch.no_grad()

@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
 import torchvision
 
 
@@ -86,6 +85,16 @@ class LinearEvalNet(nn.Module):
         return logits
 
 
+class RotNetWrapper(nn.Module):
+    # Wraps SimCLRv2 backbone (encoder+proj_head) with a rotation classifier on top of the penultimate representation h.
+    def __init__(self, backbone: SimCLRv2Model, hidden_dim: int):
+        super().__init__()
+        self.backbone = backbone
+        self.rot_head = nn.Linear(hidden_dim, 4)
 
+    def forward(self, x):
+        z, h = self.backbone(x)
+        logits = self.rot_head(h)
+        return logits, (z, h)
 
 

@@ -9,8 +9,8 @@ import os
 import numpy as np
 import random
 
-from data_loader import get_pretrain_loaders, get_supervised_loaders
-from models.vgg import SimCLRv2Model, LinearEvalNet
+from data_loader import get_pretrain_loaders, get_supervised_loaders, get_rotnet_loaders
+from models.vgg import SimCLRv2Model, LinearEvalNet, RotNetWrapper
 from utils_system import print_log
 
 def set_seed(seed: int = 42):
@@ -40,7 +40,7 @@ def nt_xent_loss(z_i, z_j, tau=0.5):
     return loss
 
 
-def pretrain(args, logger):
+def simCLR_pretrain(args, logger):
     set_seed(args.seed)
     device = torch.device(args.device)
     
@@ -107,7 +107,58 @@ def accuracy(logits, targets, topk=(1,)):
     return res
 
 
-def linear_eval(args, model: SimCLRv2Model, logger):
+def rotnet_pretrain(args, logger):
+    set_seed(args.seed)
+    device = torch.device(args.device)
+
+    train_loader, _ = get_rotnet_loaders(args)
+    backbone = SimCLRv2Model(args).to(device)
+    model = RotNetWrapper(backbone, hidden_dim=args.hidden_dim).to(device)
+
+    optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+    criterion = nn.CrossEntropyLoss()
+
+    losses = []
+    for epoch in range(1, args.epochs + 1):
+        model.train()
+        running_loss = 0.0
+        correct = 0
+        total = 0
+        for x_rot, y_rot in train_loader:
+            x_rot = x_rot.to(device, non_blocking=True)
+            y_rot = y_rot.to(device, non_blocking=True)
+
+            logits, _ = model(x_rot)
+            loss = criterion(logits, y_rot)
+
+            optimizer.zero_grad(set_to_none=True)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item() * x_rot.size(0)
+            pred = logits.argmax(dim=1)
+            correct += (pred == y_rot).sum().item()
+            total += y_rot.size(0)
+
+        scheduler.step()
+        avg_loss = running_loss / total
+        train_acc = 100.0 * correct / total
+
+        losses.append(avg_loss)
+        print_log(logger, f"[RotNet] Epoch {epoch:03d}/{args.epochs}  Loss: {avg_loss:.4f}  TrainAcc: {train_acc:.2f}% LR: {scheduler.get_last_lr()[0]:.6f}")
+
+    # Save backbone (encoder+proj_head) and rot_head
+    os.makedirs(os.path.dirname(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.pth'), exist_ok=True)
+    torch.save({ "state_dict": backbone.state_dict(), "rot_head": model.rot_head.state_dict(), "cfg": args.__dict__, "pretext": "RotNet",
+    }, f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.pth')
+    
+    print_log(logger, f"Saved RotNet checkpoint to: {f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.pth'}")
+
+    return backbone, losses
+
+
+def linear_eval(args, model, logger):
     device = torch.device(args.device)
     train_loader, test_loader = get_supervised_loaders(args)
 
@@ -167,4 +218,11 @@ def linear_eval(args, model: SimCLRv2Model, logger):
         
         print_log(logger, f"[LinearEval] Epoch {epoch:03d}/{args.linear_eval_epochs}  TrainLoss: {train_loss:.4f}  TrainAcc@1: {train_acc:.2f}%  TestAcc@1: {test_acc:.2f}%")
 
+    save_dir = f"{args.log_dir}/{args.type}"
+    os.makedirs(save_dir, exist_ok=True)
+    ckpt = {"state_dict": lin.state_dict(), "cfg": args.__dict__, "backbone": f"{args.dataset}_{args.encoder}_{args.epochs}.pth", "note": "Linear evaluation head trained on frozen backbone"}
+    save_path = f"{save_dir}/{args.dataset}_{args.encoder}_{args.linear_eval_epochs}_linear.pth"
+    torch.save(ckpt, save_path)
+    print_log(logger, f"[LinearEval] Saved linear head to: {save_path}")
+    
     return lin, train_acc_list, test_acc_list

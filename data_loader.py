@@ -7,6 +7,7 @@ from torchvision.datasets import CIFAR10
 from torch.utils.data import DataLoader, Dataset
 
 
+# ===== SimCLR (contrastive learning) =====
 class GaussianBlur(object):
     # Gaussian blur augmentation as in SimCLR.
     # Kernel size is small for CIFAR-10 (e.g., 3 or 5).
@@ -82,3 +83,50 @@ def get_supervised_loaders(args):
     test_loader = DataLoader(test_set, batch_size=args.linear_eval_batch, shuffle=False, num_workers=args.num_workers, pin_memory=True)
     
     return train_loader, test_loader
+
+
+# ===== RotNet (self-supervised rotation prediction) =====
+class RotNetTransform:
+    # Returns (x_rotated_tensor, rotation_label) where label in {0,1,2,3} 
+    # using rotations {0, 90, 180, 270}. Uses light augmentations and the same normalization as other loaders.
+    def __init__(self, image_size=32):
+        self.augment = transforms.Compose([
+            transforms.RandomResizedCrop(image_size, scale=(0.8, 1.0)),
+            transforms.RandomHorizontalFlip(),
+        ])
+        self.to_tensor = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(mean=(0.4914, 0.4822, 0.4465),
+                                 std=(0.2470, 0.2435, 0.2616)),
+        ])
+
+    def __call__(self, x):
+        if isinstance(x, (tuple, list)):
+            x = x[0]
+        img = self.augment(x)
+        k = random.randint(0, 3)  # 0,1,2,3
+        angle = 90 * k
+        img = torchvision.transforms.functional.rotate(img, angle)
+        tensor = self.to_tensor(img)
+        return tensor, k
+
+
+class RotNetCIFAR10(CIFAR10):
+    def __init__(self, root, train=True, transform=None, download=False):
+        super().__init__(root=root, train=train, transform=None, download=download)
+        self.rotnet_transform = transform or RotNetTransform(image_size=32)
+
+    def __getitem__(self, index):
+        img = Image.fromarray(self.data[index])
+        x_rot, y_rot = self.rotnet_transform(img)
+        return x_rot, y_rot
+
+
+def get_rotnet_loaders(args):
+    # Pretraining loaders for RotNet: train on CIFAR10 train split, report validation (rotation prediction) accuracy on CIFAR10 test split.
+    train_set = RotNetCIFAR10(root=args.data_dir, train=True, transform=RotNetTransform(32), download=True)
+    test_set  = RotNetCIFAR10(root=args.data_dir, train=False, transform=RotNetTransform(32), download=True)
+
+    train_loader = DataLoader(train_set, batch_size=args.batch, shuffle=True, num_workers=args.num_workers, drop_last=True, pin_memory=True)
+    val_loader   = DataLoader(test_set,  batch_size=args.batch, shuffle=False, num_workers=args.num_workers, drop_last=False, pin_memory=True)
+    return train_loader, val_loader
