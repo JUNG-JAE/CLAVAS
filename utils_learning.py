@@ -57,6 +57,8 @@ def pretrain(args, logger):
     else:
         print_log(logger, "Checkpoint not found; using in-memory model.")
 
+    losses = []
+    
     model.train()
     for epoch in range(1, args.epochs + 1):
         total_loss = 0.0
@@ -77,6 +79,9 @@ def pretrain(args, logger):
 
         scheduler.step()
         avg_loss = total_loss / len(loader)
+        
+        losses.append(avg_loss)
+        
         print_log(logger, f"[Pretrain] Epoch {epoch:03d}/{args.epochs}  Loss: {avg_loss:.4f}  LR: {scheduler.get_last_lr()[0]:.6f}")
 
     # Save encoder + projection head
@@ -84,7 +89,7 @@ def pretrain(args, logger):
     torch.save({"state_dict": model.state_dict(), "cfg": args.__dict__,}, f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.pth')
     print_log(logger, f"Saved checkpoint to: {f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}.pth'}")
     
-    return model
+    return model, losses
 
 
 def accuracy(logits, targets, topk=(1,)):
@@ -113,6 +118,9 @@ def linear_eval(args, model: SimCLRv2Model, logger):
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.linear_eval_epochs)
     criterion = nn.CrossEntropyLoss()
 
+    train_acc_list = []
+    test_acc_list = []
+    
     for epoch in range(1, args.linear_eval_epochs + 1):
         lin.train()
         train_loss = 0.0
@@ -153,6 +161,10 @@ def linear_eval(args, model: SimCLRv2Model, logger):
                 test_correct += (pred == y).sum().item()
                 test_total += y.size(0)
         test_acc = 100.0 * test_correct / test_total
+        
+        train_acc_list.append(train_acc)
+        test_acc_list.append(test_acc)
+        
         print_log(logger, f"[LinearEval] Epoch {epoch:03d}/{args.linear_eval_epochs}  TrainLoss: {train_loss:.4f}  TrainAcc@1: {train_acc:.2f}%  TestAcc@1: {test_acc:.2f}%")
 
-    return lin
+    return lin, train_acc_list, test_acc_list

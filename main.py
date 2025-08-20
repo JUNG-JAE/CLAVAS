@@ -12,6 +12,8 @@ import argparse
 from utils_learning import pretrain, linear_eval
 from utils_system import set_logger, print_log
 
+from data_loader import get_supervised_loaders
+from utils_system import tsne_from_args_and_loader, plot_linear_eval_acc, plot_pretrain_losses
 
 def main():
     parser = argparse.ArgumentParser()
@@ -22,7 +24,7 @@ def main():
     parser.add_argument('--num_workers', type=int, default=4, help='number of subprocesses to use for data loading')
     
     # Model
-    parser.add_argument('--encoder', type=str, default='vgg11', help='set the model')
+    parser.add_argument('--encoder', type=str, default='vgg11_bn', help='set the model')
     parser.add_argument('--device', type=str, default='cuda', help='use gpu or not')
     parser.add_argument('--seed', type=int, default=42, help='seed for model parameters')
     parser.add_argument('--hidden_dim', type=int, default=2048)
@@ -32,7 +34,7 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--wd', type=float, default=1e-6, help='weight decay')
     parser.add_argument('--batch', type=int, default=256, help='batch size')
-    parser.add_argument('--epochs', type=int, default=100, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=500, help='number of epochs')
     parser.add_argument('--tau', type=float, default=0.5, help='temperature parameter')
     
     # Learning for linear evaluation
@@ -53,9 +55,16 @@ def main():
     for k in iter(kv):
         print_log(logger, f"  {k:<{width}} : {kv[k]}")
     
-    trained_encoder = pretrain(args, logger)
+    trained_encoder, pretrain_losses = pretrain(args, logger)
     
-    linear_eval(args, trained_encoder, logger)
+    _, train_acc_list, test_acc_list = linear_eval(args, trained_encoder, logger)
+    
+    plot_pretrain_losses(args, pretrain_losses)
+    plot_linear_eval_acc(args, train_acc_list, test_acc_list)
+    
+    train_loader, test_loader = get_supervised_loaders(args)  # CIFAR-10 data loaders with labels
+    tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="encoder", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for encoder output
+    tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="h", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for h output
     
     return 0
 
