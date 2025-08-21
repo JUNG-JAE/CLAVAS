@@ -13,7 +13,7 @@ from utils_learning import pretrain, linear_eval
 from utils_system import set_logger, print_log
 
 from data_loader import get_supervised_loaders
-from utils_system import tsne_from_args_and_loader, plot_linear_eval_acc, plot_pretrain_losses
+from utils_system import tsne_from_args_and_loader, plot_linear_eval_acc, plot_pretrain_losses, intra_class_distances
 
 def main():
     parser = argparse.ArgumentParser()
@@ -34,13 +34,13 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--wd', type=float, default=1e-6, help='weight decay')
     parser.add_argument('--batch', type=int, default=256, help='batch size')
-    parser.add_argument('--epochs', type=int, default=2, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
     parser.add_argument('--tau', type=float, default=0.5, help='temperature parameter')
     parser.add_argument('--hard_negative', action='store_true', default=True, help='include hard negatives')
     
     # Learning for linear evaluation
     parser.add_argument('--linear_eval_batch', type=int, default=512, help='batch size for linear evaluation')
-    parser.add_argument('--linear_eval_epochs', type=int, default=2, help='number of epochs for linear evaluation')
+    parser.add_argument('--linear_eval_epochs', type=int, default=10, help='number of epochs for linear evaluation')
     parser.add_argument('--linear_eval_lr', type=float, default=1e-2, help='learning rate for linear evaluation')
     
     # System
@@ -68,6 +68,9 @@ def main():
     train_loader, test_loader = get_supervised_loaders(args)  # CIFAR-10 data loaders with labels
     tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="encoder", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for encoder output
     # tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="h", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for h output
+    
+    intra_class_distances(args, trained_encoder, test_loader, mode="encoder", logger=logger)
+
     
     return 0
 

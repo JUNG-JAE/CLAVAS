@@ -213,3 +213,59 @@ def plot_linear_eval_acc(args, train_acc, test_acc):
     
     plt.tight_layout()
     plt.savefig(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}_linear_eval_acc.png', dpi=150)
+
+
+# ==============================
+# Intra-class distance utilities
+
+@torch.no_grad()
+def _extract_embeddings(simclr_model, loader, mode: Literal["encoder","h"]="encoder"):
+    simclr_model.eval()
+    device = next(simclr_model.parameters()).device
+    feats_all, labels_all = [], []
+    for batch in loader:
+        x, y = batch[0], batch[1]
+        x = x.to(device, non_blocking=True)
+        feats = simclr_model.encoder(x)
+        if mode == "encoder":
+            emb = feats
+        elif mode == "h":
+            _, h = simclr_model.proj_head(feats)
+            emb = h
+        else:
+            raise ValueError(...)
+        feats_all.append(emb.detach().cpu())
+        labels_all.append(y.detach().cpu())
+    return torch.cat(feats_all, 0), torch.cat(labels_all, 0)
+
+
+def compute_intra_class_distances(simclr_model, loader, mode: Literal["encoder","h"]="encoder"):
+    feats, labels = _extract_embeddings(simclr_model, loader, mode=mode)
+    results = {}
+    for cls in torch.unique(labels).tolist():
+        X = feats[labels == int(cls)]
+        if X.shape[0] == 0:
+            results[int(cls)] = float("nan")
+            continue
+        c = X.mean(dim=0, keepdim=True)
+        dists = torch.norm(X - c, dim=1)
+        results[int(cls)] = dists.mean().item()
+    return results
+
+
+def log_intra_class_distances(logger, distances_dict, prefix: str = "", use_cifar10_names: bool = True):
+    parts = []
+    for cls_idx in sorted(distances_dict.keys()):
+        name = CIFAR10_CLASSES[cls_idx] if (use_cifar10_names and 0 <= cls_idx < len(CIFAR10_CLASSES)) else str(cls_idx)
+        parts.append(f"{name}: {distances_dict[cls_idx]:.4f}")
+    line = (prefix + " ") if prefix else ""
+    # line += "  ".join(parts)
+    print_log(logger, parts)
+
+
+def intra_class_distances(args, simclr_model, loader, mode: Literal["encoder","h"]="encoder", logger=None):
+    if logger is None:
+        logger = set_logger(args)
+    distances = compute_intra_class_distances(simclr_model, loader, mode=mode)
+    print_log(logger, f"[IntraClassDistance/{mode}] mean L2 distance to class centroid")
+    log_intra_class_distances(logger, distances, prefix=f"[{mode}]")

@@ -49,13 +49,13 @@ def pretrain(args, logger):
     optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
     scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 
-    if os.path.exists(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.pth'):
-        print_log(logger, f"Loading checkpoint from {args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs} for pretraining...")
-        payload = torch.load(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.pth', map_location=args.device)
-        state = payload.get("state_dict", payload)
-        model.load_state_dict(state, strict=True)
-    else:
-        print_log(logger, "Checkpoint not found; using in-memory model.")
+    # if os.path.exists(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.pth'):
+    #     print_log(logger, f"Loading checkpoint from {args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs} for pretraining...")
+    #     payload = torch.load(f'{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.epochs}.pth', map_location=args.device)
+    #     state = payload.get("state_dict", payload)
+    #     model.load_state_dict(state, strict=True)
+    # else:
+    #     print_log(logger, "Checkpoint not found; using in-memory model.")
 
     losses = []
     
