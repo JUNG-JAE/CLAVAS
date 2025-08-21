@@ -10,7 +10,7 @@ import numpy as np
 import random
 
 from data_loader import get_pretrain_loaders, get_supervised_loaders
-from models.vgg import SimCLRv2Model, LinearEvalNet
+from models import SimCLRv2Model, LinearEvalNet
 from utils_system import print_log
 
 def set_seed(seed: int = 42):
