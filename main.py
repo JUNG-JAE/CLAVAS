@@ -34,12 +34,13 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--wd', type=float, default=1e-6, help='weight decay')
     parser.add_argument('--batch', type=int, default=256, help='batch size')
-    parser.add_argument('--epochs', type=int, default=3, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=2, help='number of epochs')
     parser.add_argument('--tau', type=float, default=0.5, help='temperature parameter')
+    parser.add_argument('--hard_negative', action='store_true', default=True, help='include hard negatives')
     
     # Learning for linear evaluation
     parser.add_argument('--linear_eval_batch', type=int, default=512, help='batch size for linear evaluation')
-    parser.add_argument('--linear_eval_epochs', type=int, default=3, help='number of epochs for linear evaluation')
+    parser.add_argument('--linear_eval_epochs', type=int, default=2, help='number of epochs for linear evaluation')
     parser.add_argument('--linear_eval_lr', type=float, default=1e-2, help='learning rate for linear evaluation')
     
     # System
