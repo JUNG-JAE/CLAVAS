@@ -170,12 +170,8 @@ def linear_eval(args, model: SimCLRv2Model, logger):
     return lin, train_acc_list, test_acc_list
 
 
-# =========================
-# Supervised (downstream) for resnet18
-# =========================
-
+# ===== Supervised (downstream) for resnet18 =====
 def evaluate_classifier(model: nn.Module, loader, device: torch.device) -> float:
-    """test loader로 정확도(Top-1 %) 계산"""
     model.eval()
     correct = 0
     total = 0
@@ -225,20 +221,19 @@ def train_downstream(args, logger):
             acc1, = accuracy(logits, y, topk=(1,))
             n = x.size(0)
             running_loss += loss.item() * n
-            running_correct += (acc1 / 100.0) * n  # 퍼센트 → 비율
+            running_correct += (acc1 / 100.0) * n
             running_total += n
 
         scheduler.step()
         train_acc = 100.0 * (running_correct / running_total) if running_total > 0 else 0.0
 
-        # 테스트 정확도
         test_acc = evaluate_classifier(model, test_loader, device)
 
         train_acc_list.append(train_acc)
         test_acc_list.append(test_acc)
         print_log(logger, f"[Supervised/resnet18] Epoch {epoch:03d}/{args.downstream_epochs}  TrainLoss: {running_loss / running_total:.4f}  TrainAcc@1: {train_acc:.2f}%  TestAcc@1: {test_acc:.2f}%")
 
-    # 저장
+    # Save
     os.makedirs(f"{args.log_dir}/{args.type}", exist_ok=True)
     save_path = f"{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.downstream_epochs}_downstream.pth"
     torch.save({"state_dict": model.state_dict(), "cfg": args.__dict__}, save_path)

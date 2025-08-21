@@ -18,5 +18,6 @@ build/
 
 # Data
 runs/
+runs_test/
 data/
 nohup.out
