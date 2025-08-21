@@ -156,3 +156,38 @@ class LinearEvalNet(nn.Module):
             _z, h = self.backbone(x)
         logits = self.fc(h)
         return logits
+
+
+# =========================
+# Supervised (downstream) for resnet18
+# =========================
+
+class DownstreamModel(nn.Module):
+    def __init__(self, args, num_classes: int = 10):
+        super().__init__()
+        name = args.encoder.lower()
+        if name == "resnet18":
+            backbone = torchvision.models.resnet18(weights=None)
+        elif name == "resnet34":
+            backbone = torchvision.models.resnet34(weights=None)
+        elif name == "resnet50":
+            backbone = torchvision.models.resnet50(weights=None)
+        else:
+            raise ValueError(f"Unsupported encoder for supervised training: {args.encoder}")
+
+        # CIFAR stem 수정
+        backbone.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1, bias=False)
+        backbone.maxpool = nn.Identity()
+
+        in_feats = backbone.fc.in_features
+        backbone.fc = nn.Linear(in_feats, num_classes)
+        self.model = backbone
+
+    def forward(self, x):
+        return self.model(x)
+
+    def extract_features(self, x):
+        modules = list(self.model.children())[:-1]
+        encoder = nn.Sequential(*modules)
+        feats = encoder(x)
+        return torch.flatten(feats, 1)

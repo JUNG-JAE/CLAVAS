@@ -10,7 +10,7 @@ import numpy as np
 import random
 
 from data_loader import get_pretrain_loaders, get_supervised_loaders
-from models import SimCLRv2Model, LinearEvalNet
+from models import SimCLRv2Model, LinearEvalNet, DownstreamModel
 from utils_system import print_log
 
 def set_seed(seed: int = 42):
@@ -168,3 +168,79 @@ def linear_eval(args, model: SimCLRv2Model, logger):
         print_log(logger, f"[LinearEval] Epoch {epoch:03d}/{args.linear_eval_epochs}  TrainLoss: {train_loss:.4f}  TrainAcc@1: {train_acc:.2f}%  TestAcc@1: {test_acc:.2f}%")
 
     return lin, train_acc_list, test_acc_list
+
+
+# =========================
+# Supervised (downstream) for resnet18
+# =========================
+
+def evaluate_classifier(model: nn.Module, loader, device: torch.device) -> float:
+    """test loader로 정확도(Top-1 %) 계산"""
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device, non_blocking=True)
+            y = y.to(device, non_blocking=True)
+            logits = model(x)
+            pred = logits.argmax(dim=1)
+            correct += (pred == y).sum().item()
+            total += y.size(0)
+            
+    return 100.0 * correct / total if total > 0 else 0.0
+
+
+def train_downstream(args, logger):
+    set_seed(args.seed)
+    device = torch.device(args.device)
+
+    train_loader, test_loader = get_supervised_loaders(args)
+
+    model = DownstreamModel(args, num_classes=10).to(device)
+    criterion = nn.CrossEntropyLoss()
+
+    optimizer = optim.SGD(model.parameters(), lr=args.downstream_lr, momentum=args.downstream_momentum, weight_decay=args.downstream_wd, nesterov=True)
+    scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.downstream_epochs)
+
+    train_acc_list, test_acc_list = [], []
+
+    for epoch in range(1, args.downstream_epochs + 1):
+        model.train()
+        running_correct = 0
+        running_total = 0
+        running_loss = 0.0
+
+        for x, y in train_loader:
+            x = x.to(device, non_blocking=True)
+            y = y.to(device, non_blocking=True)
+
+            logits = model(x)
+            loss = criterion(logits, y)
+
+            optimizer.zero_grad(set_to_none=True)
+            loss.backward()
+            optimizer.step()
+
+            acc1, = accuracy(logits, y, topk=(1,))
+            n = x.size(0)
+            running_loss += loss.item() * n
+            running_correct += (acc1 / 100.0) * n  # 퍼센트 → 비율
+            running_total += n
+
+        scheduler.step()
+        train_acc = 100.0 * (running_correct / running_total) if running_total > 0 else 0.0
+
+        # 테스트 정확도
+        test_acc = evaluate_classifier(model, test_loader, device)
+
+        train_acc_list.append(train_acc)
+        test_acc_list.append(test_acc)
+        print_log(logger, f"[Supervised/resnet18] Epoch {epoch:03d}/{args.downstream_epochs}  TrainLoss: {running_loss / running_total:.4f}  TrainAcc@1: {train_acc:.2f}%  TestAcc@1: {test_acc:.2f}%")
+
+    # 저장
+    os.makedirs(f"{args.log_dir}/{args.type}", exist_ok=True)
+    save_path = f"{args.log_dir}/{args.type}/{args.dataset}_{args.encoder}_{args.downstream_epochs}_downstream.pth"
+    torch.save({"state_dict": model.state_dict(), "cfg": args.__dict__}, save_path)
+
+    return model, train_acc_list, test_acc_list, save_path

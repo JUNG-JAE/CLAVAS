@@ -9,11 +9,11 @@
 
 import argparse
 
-from utils_learning import pretrain, linear_eval
+from utils_learning import pretrain, linear_eval, train_downstream
 from utils_system import set_logger, print_log
 
 from data_loader import get_supervised_loaders
-from utils_system import tsne_from_args_and_loader, plot_linear_eval_acc, plot_pretrain_losses, intra_class_distances
+from utils_system import tsne_from_args_and_loader, plot_linear_eval_acc, plot_pretrain_losses, intra_class_distances, build_resnet_encoder_from_classifier
 
 def main():
     parser = argparse.ArgumentParser()
@@ -34,7 +34,7 @@ def main():
     parser.add_argument('--lr', type=float, default=1e-3, help='learning rate')
     parser.add_argument('--wd', type=float, default=1e-6, help='weight decay')
     parser.add_argument('--batch', type=int, default=256, help='batch size')
-    parser.add_argument('--epochs', type=int, default=10, help='number of epochs')
+    parser.add_argument('--epochs', type=int, default=30, help='number of epochs')
     parser.add_argument('--tau', type=float, default=0.5, help='temperature parameter')
     parser.add_argument('--hard_negative', action='store_true', default=True, help='include hard negatives')
     
@@ -43,8 +43,14 @@ def main():
     parser.add_argument('--linear_eval_epochs', type=int, default=10, help='number of epochs for linear evaluation')
     parser.add_argument('--linear_eval_lr', type=float, default=1e-2, help='learning rate for linear evaluation')
     
+    # Learning for downstream tasks
+    parser.add_argument('--downstream_epochs', type=int, default=10, help='number of epochs')
+    parser.add_argument('--downstream_lr', type=float, default=1e-3, help='learning rate')
+    parser.add_argument('--downstream_wd', type=float, default=5e-4, help='weight decay')
+    parser.add_argument('--downstream_momentum', type=float, default=0.9, help='momentum for SGD')
+
     # System
-    parser.add_argument('--type', type=str, default='CL', help='log file path')
+    parser.add_argument('--type', type=str, default='downstream', help='log file path')
     parser.add_argument('--log_dir', type=str, default='./runs', help='log file path')
     args = parser.parse_args()
     
@@ -56,21 +62,35 @@ def main():
     for k in iter(kv):
         print_log(logger, f"  {k:<{width}} : {kv[k]}")
     
-    trained_encoder, pretrain_losses = pretrain(args, logger)
-    print_log(logger, " ")
-    
-    _, train_acc_list, test_acc_list = linear_eval(args, trained_encoder, logger)
-    print_log(logger, " ")
-    
-    plot_pretrain_losses(args, pretrain_losses)
-    plot_linear_eval_acc(args, train_acc_list, test_acc_list)
-    
-    train_loader, test_loader = get_supervised_loaders(args)  # CIFAR-10 data loaders with labels
-    tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="encoder", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for encoder output
-    # tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="h", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for h output
-    
-    intra_class_distances(args, trained_encoder, test_loader, mode="encoder", logger=logger)
+    if args.type == 'CL':
+        trained_encoder, pretrain_losses = pretrain(args, logger)
+        print_log(logger, " ")
+        
+        _, train_acc_list, test_acc_list = linear_eval(args, trained_encoder, logger)
+        print_log(logger, " ")
+        
+        plot_pretrain_losses(args, pretrain_losses)
+        plot_linear_eval_acc(args, train_acc_list, test_acc_list)
+        
+        train_loader, test_loader = get_supervised_loaders(args)  # CIFAR-10 data loaders with labels
+        tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="encoder", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for encoder output
+        # tsne_from_args_and_loader(args, trained_encoder, test_loader, mode="h", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for h output
+        
+        intra_class_distances(args, trained_encoder, test_loader, mode="encoder", logger=logger)
+    elif args.type == 'downstream':
+        downstream_model, train_acc_list, test_acc_list, _ = train_downstream(args, logger)
 
+        plot_linear_eval_acc(args, train_acc_list, test_acc_list)
+        
+        encoder_only = build_resnet_encoder_from_classifier(downstream_model).to(args.device)
+        
+        train_loader, test_loader = get_supervised_loaders(args)  # CIFAR-10 data loaders with labels
+        
+        tsne_from_args_and_loader(args, encoder_only, test_loader, mode="encoder", max_samples=5000, perplexity=30.0, n_iter=1000) # 2D t-SNE for encoder output
+        
+        
+        intra_class_distances(args, encoder_only, test_loader, mode="encoder", logger=logger)
+        # intra_class_distances(args, downstream_model, test_loader, mode="h", logger=logger)
     
     return 0
 
