@@ -27,10 +27,11 @@
 | Accuracy<br> (a) | ASR($\epsilon=0.03$)<br> (b) | ASR($\epsilon=0.07$)<br> (c) | ASR($\epsilon=0.1$)<br> (d) |
 |---|---|---|---|
 | <img width="400" height="300" alt="finetune_accuracy" src="https://github.com/user-attachments/assets/b8e85573-b6c2-4776-89c3-60ee33f1d9a5" /> | <img width="400" height="300" alt="finetune_0 1" src="https://github.com/user-attachments/assets/75c4345e-a317-47e5-82ce-40c1f7875306" /> | <img width="400" height="300" alt="finetune_0 03" src="https://github.com/user-attachments/assets/9e18040a-e672-4963-8444-8893ed6f3bcd" /> | <img width="400" height="300" alt="finetune_0 07" src="https://github.com/user-attachments/assets/2d7d54f5-25d5-4fce-a8fb-936e3db1be86" /> |
+
 | Accuracy with HN<br> (e) | ASR($\epsilon=0.03$) with HN<br> (f) | ASR($\epsilon=0.07$) with HN<br> (g) | ASR($\epsilon=0.1$) with HN<br> (h) |
 |---|---|---|---|
 | <img width="400" height="300" alt="finetune_HN_accuracy" src="https://github.com/user-attachments/assets/a14e1ed0-41cd-4f8a-9ac2-17bc55c3cf7e" /> | <img width="400" height="300" alt="finetune_HN_0 1" src="https://github.com/user-attachments/assets/2f0fbc5f-139a-49d6-9bcd-29119970bfe5" /> | <img width="400" height="300" alt="finetune_HN_0 03" src="https://github.com/user-attachments/assets/f00a7948-704e-40ad-88ed-e7fce1696729" /> | <img width="400" height="300" alt="finetune_HN_0 07" src="https://github.com/user-attachments/assets/38120149-bfd4-437d-bfd3-27f2fb9f0352" /> |
-|---|---|---|---|
+
 - **Attack Success Rate (ASR)**: the rate at which an adversarial attack successfully causes misclassification
 - **$\epsilon$**: the perturbation magnitude in FGSM, i.e., the attack strength
 - **Aug**: linear evaluation after learning the representation layer with augmented data
