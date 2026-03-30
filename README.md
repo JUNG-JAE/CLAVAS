@@ -26,11 +26,11 @@
 
 | Accuracy (a) | ASR($\epsilon=0.03$) (b) | ASR($\epsilon=0.07$) (c) | ASR($\epsilon=0.1$) (d) |
 |---|---|---|---|
-| Image 1 | Image 2 | Image 3 | Image 4 |
+| <img width="400" height="300" alt="finetune_accuracy" src="https://github.com/user-attachments/assets/b8e85573-b6c2-4776-89c3-60ee33f1d9a5" /> | <img width="400" height="300" alt="finetune_0 1" src="https://github.com/user-attachments/assets/75c4345e-a317-47e5-82ce-40c1f7875306" /> | <img width="400" height="300" alt="finetune_0 03" src="https://github.com/user-attachments/assets/9e18040a-e672-4963-8444-8893ed6f3bcd" /> | <img width="400" height="300" alt="finetune_0 07" src="https://github.com/user-attachments/assets/2d7d54f5-25d5-4fce-a8fb-936e3db1be86" /> |
 
 | Accuracy with HN (e) | ASR($\epsilon=0.03$) with HN (f) | ASR($\epsilon=0.07$) with HN (g) | ASR($\epsilon=0.1$) with HN (h) |
 |---|---|---|---|
-| Image 1 | Image 2 | Image 3 | Image 4 |
+| <img width="400" height="300" alt="finetune_HN_accuracy" src="https://github.com/user-attachments/assets/a14e1ed0-41cd-4f8a-9ac2-17bc55c3cf7e" /> | <img width="400" height="300" alt="finetune_HN_0 1" src="https://github.com/user-attachments/assets/2f0fbc5f-139a-49d6-9bcd-29119970bfe5" /> | <img width="400" height="300" alt="finetune_HN_0 03" src="https://github.com/user-attachments/assets/f00a7948-704e-40ad-88ed-e7fce1696729" /> | <img width="400" height="300" alt="finetune_HN_0 07" src="https://github.com/user-attachments/assets/38120149-bfd4-437d-bfd3-27f2fb9f0352" /> |
 
 - **Attack Success Rate (ASR)**: the rate at which an adversarial attack successfully causes misclassification
 - **$\epsilon$**: the perturbation magnitude in FGSM, i.e., the attack strength
@@ -79,13 +79,13 @@
 
 ### t-SNE
 
-| Accuracy (a) | ASR($\epsilon=0.03$) (b) | ASR($\epsilon=0.07$) (c) | ASR($\epsilon=0.1$) (d) |
+| Aug (a) | $\tau = 0.1$ (b) | $\tau = 0.3$ (c) | $\tau = 0.5$ (d) |
 |---|---|---|---|
-| Image 1 | Image 2 | Image 3 | Image 4 |
+| <img width="1052" height="749" alt="acc_aug" src="https://github.com/user-attachments/assets/edb4cc79-ac5f-4f28-a7b4-6973aaa19bb0" /> | <img width="1056" height="749" alt="01" src="https://github.com/user-attachments/assets/e144baa6-40e4-442d-9997-d1811f8529e6" /> | <img width="1057" height="751" alt="03" src="https://github.com/user-attachments/assets/3b4ffdcb-ef7e-495e-8277-7c0462f1661f" /> | <img width="1055" height="748" alt="05" src="https://github.com/user-attachments/assets/5b03d3ce-00e0-4617-b15c-b58bb62edc53" /> |
 
-| Accuracy with HN (e) | ASR($\epsilon=0.03$) with HN (f) | ASR($\epsilon=0.07$) with HN (g) | ASR($\epsilon=0.1$) with HN (h) |
+| NoAug (a) | $\tau = 0.1$ (b) with HN | $\tau = 0.3$ (c) with HN | $\tau = 0.5$ (d) with HN |
 |---|---|---|---|
-| Image 1 | Image 2 | Image 3 | Image 4 |
+| <img width="1053" height="747" alt="acc_augX" src="https://github.com/user-attachments/assets/a31b15b3-5c99-4d76-a4b3-b8f76a814d58" /> | <img width="1058" height="746" alt="HN_01" src="https://github.com/user-attachments/assets/66d1bdc0-6d83-445f-983a-fe3714605840" /> | <img width="1051" height="748" alt="HN_03" src="https://github.com/user-attachments/assets/a5a9fd9f-9510-493f-b7f0-36215a3be509" /> | <img width="1053" height="748" alt="HN_05" src="https://github.com/user-attachments/assets/710ebac4-40d1-4ca0-89bb-73b33a7d6a94" /> |
 
 ## Future Work
 - In future work, we plan to investigate whether contrastive learning methods that use **clustering** to alleviate the **false negative** problem are also vulnerable to adversarial attacks.
