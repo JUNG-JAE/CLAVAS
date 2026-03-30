@@ -24,7 +24,7 @@
 
 ### Linear Evaluation under FGSM Attacks
 
-| Accuracy<br> (a) | ASR($\epsilon=0.03$) (b) | ASR($\epsilon=0.07$) (c) | ASR($\epsilon=0.1$) (d) |
+| Accuracy (a) | ASR($\epsilon=0.03$) (b) | ASR($\epsilon=0.07$) (c) | ASR($\epsilon=0.1$) (d) |
 |---|---|---|---|
 | <img width="400" height="300" alt="finetune_accuracy" src="https://github.com/user-attachments/assets/b8e85573-b6c2-4776-89c3-60ee33f1d9a5" /> | <img width="400" height="300" alt="finetune_0 1" src="https://github.com/user-attachments/assets/75c4345e-a317-47e5-82ce-40c1f7875306" /> | <img width="400" height="300" alt="finetune_0 03" src="https://github.com/user-attachments/assets/9e18040a-e672-4963-8444-8893ed6f3bcd" /> | <img width="400" height="300" alt="finetune_0 07" src="https://github.com/user-attachments/assets/2d7d54f5-25d5-4fce-a8fb-936e3db1be86" /> |
 
